@@ -34,6 +34,7 @@ enum AppPage {
 @Entry
 @Component
 struct Index {
+  private pathStack: NavPathStack = new NavPathStack();
   private engine: GameEngine = new GameEngine();
   private boardCells: number[] = [];
   private timerId: number = -1;
@@ -52,7 +53,6 @@ struct Index {
   @State showClearConfirm: boolean = false;
   @State gameResultSaved: boolean = false;
   @StorageLink('appInBackground') @Watch('onAppBackgroundChanged') appInBackground: boolean = false;
-  @StorageLink('backRequestId') @Watch('onSystemBackRequested') backRequestId: number = 0;
 
   aboutToAppear(): void {
     for (let index: number = 0; index < GameEngine.BOARD_SIZE * GameEngine.BOARD_SIZE; index += 1) {
@@ -66,7 +66,6 @@ struct Index {
     this.splashTimerId = setTimeout(() => {
       this.replacePage(AppPage.HOME);
     }, 1200);
-    this.updateBackCapability();
   }
 
   aboutToDisappear(): void {
@@ -90,20 +89,25 @@ struct Index {
     if (page === this.page) {
       return;
     }
+    const leavingHome: boolean = this.page === AppPage.HOME;
     if (this.page !== AppPage.SPLASH) {
       this.pageHistory.push(this.page);
     }
     this.page = page;
+    if (leavingHome && page !== AppPage.HOME) {
+      this.pathStack.pushPathByName('content', null);
+    }
     if (page === AppPage.RANK) {
       this.ranks = StorageService.getRanks();
     }
-    this.updateBackCapability();
   }
 
   private replacePage(page: AppPage): void {
     this.page = page;
     this.pageHistory = [];
-    this.updateBackCapability();
+    if (page === AppPage.HOME) {
+      this.pathStack.clear(false);
+    }
   }
 
   private goBack(): void {
@@ -115,23 +119,68 @@ struct Index {
       const previous: AppPage | undefined = this.pageHistory.pop();
       if (previous !== undefined) {
         this.page = previous;
+        if (previous === AppPage.HOME) {
+          this.pathStack.pop();
+        }
       }
     } else if (this.page !== AppPage.HOME && this.page !== AppPage.SPLASH) {
       this.page = AppPage.HOME;
+      this.pathStack.clear(false);
     }
     if (this.page === AppPage.RANK) {
       this.ranks = StorageService.getRanks();
     }
-    this.updateBackCapability();
   }
 
-  private updateBackCapability(): void {
-    AppStorage.set('canNavigateBack',
-      this.page !== AppPage.HOME && this.page !== AppPage.SPLASH);
+  @Builder
+  private AppSurface(): void {
+    Stack() {
+      Column()
+        .width('100%')
+        .height('100%')
+        .linearGradient({
+          angle: 145,
+          colors: [[this.palette().backgroundGlow, 0.0], [this.palette().background, 0.46], ['#02060A', 1.0]]
+        })
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      if (this.page === AppPage.SPLASH) {
+        this.SplashPage()
+      } else if (this.page === AppPage.HOME) {
+        this.HomePage()
+      } else if (this.page === AppPage.DIFFICULTY) {
+        this.DifficultyPage()
+      } else if (this.page === AppPage.GAME) {
+        this.GamePage()
+      } else if (this.page === AppPage.RANK) {
+        this.RankPage()
+      } else if (this.page === AppPage.SETTINGS) {
+        this.SettingsPage()
+      } else if (this.page === AppPage.ACCOUNT) {
+        this.AccountPage()
+      } else {
+        this.AboutPage()
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .onAreaChange((_oldValue: Area, newValue: Area) => {
+      this.windowWidth = Number(newValue.width);
+      this.windowHeight = Number(newValue.height);
+    })
   }
 
-  onSystemBackRequested(): void {
-    this.goBack();
+  @Builder
+  private NavDestinationMap(name: string): void {
+    if (name === 'content') {
+      NavDestination() {
+        this.AppSurface()
+      }
+      .hideTitleBar(true)
+      .onBackPressed(() => {
+        this.goBack();
+        return true;
+      })
+    }
   }
 
   private startGame(): void {
@@ -938,38 +987,13 @@ struct Index {
   }
 
   build() {
-    Stack() {
-      Column()
-        .width('100%')
-        .height('100%')
-        .linearGradient({
-          angle: 145,
-          colors: [[this.palette().backgroundGlow, 0.0], [this.palette().background, 0.46], ['#02060A', 1.0]]
-        })
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-      if (this.page === AppPage.SPLASH) {
-        this.SplashPage()
-      } else if (this.page === AppPage.HOME) {
-        this.HomePage()
-      } else if (this.page === AppPage.DIFFICULTY) {
-        this.DifficultyPage()
-      } else if (this.page === AppPage.GAME) {
-        this.GamePage()
-      } else if (this.page === AppPage.RANK) {
-        this.RankPage()
-      } else if (this.page === AppPage.SETTINGS) {
-        this.SettingsPage()
-      } else if (this.page === AppPage.ACCOUNT) {
-        this.AccountPage()
-      } else {
-        this.AboutPage()
-      }
+    Navigation(this.pathStack) {
+      this.AppSurface()
     }
+    .hideTitleBar(true)
+    .mode(NavigationMode.Stack)
+    .navDestination(this.NavDestinationMap)
     .width('100%')
     .height('100%')
-    .onAreaChange((_oldValue: Area, newValue: Area) => {
-      this.windowWidth = Number(newValue.width);
-      this.windowHeight = Number(newValue.height);
-    })
   }
 }
