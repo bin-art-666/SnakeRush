@@ -9,6 +9,8 @@ const DOMAIN = 0x0000;
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     AppStorage.setOrCreate('appInBackground', false);
+    AppStorage.setOrCreate('canNavigateBack', false);
+    AppStorage.setOrCreate('backRequestId', 0);
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     } catch (err) {
@@ -51,5 +53,14 @@ export default class EntryAbility extends UIAbility {
     AppStorage.set('appInBackground', true);
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+  }
+
+  onBackPressed(): boolean {
+    if (AppStorage.get<boolean>('canNavigateBack') === true) {
+      const requestId: number = AppStorage.get<number>('backRequestId') ?? 0;
+      AppStorage.set('backRequestId', requestId + 1);
+      return true;
+    }
+    return false;
   }
 }

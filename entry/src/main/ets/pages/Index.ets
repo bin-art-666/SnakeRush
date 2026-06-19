@@ -40,6 +40,7 @@ struct Index {
   private splashTimerId: number = -1;
   private touchStartX: number = 0;
   private touchStartY: number = 0;
+  private pageHistory: AppPage[] = [];
   @State page: AppPage = AppPage.SPLASH;
   @State snapshot: GameSnapshot = new GameSnapshot();
   @State settings: GameSettings = new GameSettings();
@@ -47,9 +48,11 @@ struct Index {
   @State account: AccountProfile = new AccountProfile();
   @State selectedDifficulty: Difficulty = Difficulty.NORMAL;
   @State windowWidth: number = 360;
+  @State windowHeight: number = 780;
   @State showClearConfirm: boolean = false;
   @State gameResultSaved: boolean = false;
   @StorageLink('appInBackground') @Watch('onAppBackgroundChanged') appInBackground: boolean = false;
+  @StorageLink('backRequestId') @Watch('onSystemBackRequested') backRequestId: number = 0;
 
   aboutToAppear(): void {
     for (let index: number = 0; index < GameEngine.BOARD_SIZE * GameEngine.BOARD_SIZE; index += 1) {
@@ -61,8 +64,9 @@ struct Index {
     this.account = AccountService.getProfile();
     this.snapshot.bestScore = StorageService.getBestScore();
     this.splashTimerId = setTimeout(() => {
-      this.page = AppPage.HOME;
+      this.replacePage(AppPage.HOME);
     }, 1200);
+    this.updateBackCapability();
   }
 
   aboutToDisappear(): void {
@@ -83,10 +87,51 @@ struct Index {
   }
 
   private navigate(page: AppPage): void {
+    if (page === this.page) {
+      return;
+    }
+    if (this.page !== AppPage.SPLASH) {
+      this.pageHistory.push(this.page);
+    }
     this.page = page;
     if (page === AppPage.RANK) {
       this.ranks = StorageService.getRanks();
     }
+    this.updateBackCapability();
+  }
+
+  private replacePage(page: AppPage): void {
+    this.page = page;
+    this.pageHistory = [];
+    this.updateBackCapability();
+  }
+
+  private goBack(): void {
+    if (this.page === AppPage.GAME) {
+      this.stopTimer();
+      this.snapshot = this.engine.stop();
+    }
+    if (this.pageHistory.length > 0) {
+      const previous: AppPage | undefined = this.pageHistory.pop();
+      if (previous !== undefined) {
+        this.page = previous;
+      }
+    } else if (this.page !== AppPage.HOME && this.page !== AppPage.SPLASH) {
+      this.page = AppPage.HOME;
+    }
+    if (this.page === AppPage.RANK) {
+      this.ranks = StorageService.getRanks();
+    }
+    this.updateBackCapability();
+  }
+
+  private updateBackCapability(): void {
+    AppStorage.set('canNavigateBack',
+      this.page !== AppPage.HOME && this.page !== AppPage.SPLASH);
+  }
+
+  onSystemBackRequested(): void {
+    this.goBack();
   }
 
   private startGame(): void {
@@ -97,7 +142,7 @@ struct Index {
     this.stopTimer();
     this.gameResultSaved = false;
     this.snapshot = this.engine.start(this.selectedDifficulty, StorageService.getBestScore());
-    this.page = AppPage.GAME;
+    this.navigate(AppPage.GAME);
     this.scheduleTick();
   }
 
@@ -141,7 +186,17 @@ struct Index {
   private leaveGame(): void {
     this.stopTimer();
     this.snapshot = this.engine.stop();
-    this.page = AppPage.HOME;
+    this.replacePage(AppPage.HOME);
+  }
+
+  private gameBoardSize(): number {
+    if (this.windowWidth > 720) {
+      return Math.max(220, Math.min(this.windowWidth * 0.56, this.windowHeight - 150));
+    }
+    const controlsHeight: number =
+      this.settings.controlMode === ControlMode.BUTTON ||
+      deviceInfo.deviceType === deviceInfo.DeviceTypes.TYPE_TV ? 190 : 105;
+    return Math.max(210, Math.min(this.windowWidth - 32, this.windowHeight - controlsHeight));
   }
 
   private async finishGame(): Promise<void> {
@@ -285,7 +340,7 @@ struct Index {
         .fontColor(this.palette().text)
         .backgroundColor(this.palette().panel)
         .borderRadius(16)
-        .onClick(() => this.navigate(AppPage.HOME))
+        .onClick(() => this.goBack())
       Text(title)
         .fontSize(24)
         .fontWeight(FontWeight.Bold)
@@ -326,7 +381,7 @@ struct Index {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .onClick(() => this.navigate(AppPage.HOME))
+    .onClick(() => this.replacePage(AppPage.HOME))
   }
 
   @Builder
@@ -516,8 +571,8 @@ struct Index {
     }
     .columnsTemplate('repeat(20, 1fr)')
     .rowsTemplate('repeat(20, 1fr)')
-    .width('100%')
-    .aspectRatio(1)
+    .width(this.gameBoardSize())
+    .height(this.gameBoardSize())
     .padding(5)
     .backgroundColor(this.palette().panel)
     .border({ width: 1, color: this.palette().panelBorder })
@@ -562,7 +617,7 @@ struct Index {
           Button('‹')
             .width(42).height(42).fontSize(27).fontColor(this.palette().text)
             .backgroundColor(this.palette().panel).borderRadius(14)
-            .onClick(() => this.pauseGame())
+            .onClick(() => this.goBack())
           this.ScoreTile('分数', this.snapshot.score.toString())
           this.ScoreTile('最高', this.snapshot.bestScore.toString())
           Blank()
@@ -604,6 +659,7 @@ struct Index {
       .width('100%')
       .height('100%')
       .padding(this.windowWidth > 700 ? 34 : 16)
+      .alignItems(HorizontalAlign.Center)
 
       if (this.snapshot.status === GameStatus.PAUSED) {
         Column({ space: 16 }) {
@@ -890,6 +946,7 @@ struct Index {
           angle: 145,
           colors: [[this.palette().backgroundGlow, 0.0], [this.palette().background, 0.46], ['#02060A', 1.0]]
         })
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       if (this.page === AppPage.SPLASH) {
         this.SplashPage()
       } else if (this.page === AppPage.HOME) {
@@ -912,6 +969,7 @@ struct Index {
     .height('100%')
     .onAreaChange((_oldValue: Area, newValue: Area) => {
       this.windowWidth = Number(newValue.width);
+      this.windowHeight = Number(newValue.height);
     })
   }
 }
