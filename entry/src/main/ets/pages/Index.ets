@@ -9,6 +9,7 @@ import {
   Difficulty,
   difficultyLabel,
   Direction,
+  DirectionPadLayout,
   GameSettings,
   GameSnapshot,
   GameStatus,
@@ -242,9 +243,12 @@ struct Index {
     if (this.windowWidth > 720) {
       return Math.max(220, Math.min(this.windowWidth * 0.56, this.windowHeight - 150));
     }
-    const controlsHeight: number =
-      this.settings.controlMode === ControlMode.BUTTON ||
-      deviceInfo.deviceType === deviceInfo.DeviceTypes.TYPE_TV ? 190 : 105;
+    let controlsHeight: number = 105;
+    if (this.settings.controlMode === ControlMode.BUTTON ||
+      deviceInfo.deviceType === deviceInfo.DeviceTypes.TYPE_TV) {
+      controlsHeight = this.settings.directionPadLayout === DirectionPadLayout.CROSS ?
+        this.settings.directionButtonSize * 3 + 62 : this.settings.directionButtonSize * 2 + 62;
+    }
     return Math.max(210, Math.min(this.windowWidth - 32, this.windowHeight - controlsHeight));
   }
 
@@ -337,6 +341,8 @@ struct Index {
     StorageService.saveSettings(this.settings);
     const refreshed: GameSettings = new GameSettings();
     refreshed.controlMode = this.settings.controlMode;
+    refreshed.directionButtonSize = this.settings.directionButtonSize;
+    refreshed.directionPadLayout = this.settings.directionPadLayout;
     refreshed.theme = this.settings.theme;
     refreshed.soundEnabled = this.settings.soundEnabled;
     refreshed.vibrationEnabled = this.settings.vibrationEnabled;
@@ -636,9 +642,9 @@ struct Index {
   @Builder
   private DirectionButton(label: string, direction: Direction): void {
     Button(label)
-      .width(58)
-      .height(52)
-      .fontSize(22)
+      .width(this.settings.directionButtonSize)
+      .height(this.settings.directionButtonSize)
+      .fontSize(Math.max(20, this.settings.directionButtonSize * 0.38))
       .fontColor(this.palette().text)
       .backgroundColor(this.palette().panel)
       .border({ width: 1, color: this.palette().panelBorder })
@@ -648,13 +654,27 @@ struct Index {
 
   @Builder
   private DirectionPad(): void {
-    Column({ space: 7 }) {
-      this.DirectionButton('↑', Direction.UP)
-      Row({ space: 7 }) {
-        this.DirectionButton('←', Direction.LEFT)
+    if (this.settings.directionPadLayout === DirectionPadLayout.CROSS) {
+      Column({ space: 6 }) {
+        this.DirectionButton('↑', Direction.UP)
+        Row({ space: 6 }) {
+          this.DirectionButton('←', Direction.LEFT)
+          Blank().width(this.settings.directionButtonSize)
+          this.DirectionButton('→', Direction.RIGHT)
+        }
         this.DirectionButton('↓', Direction.DOWN)
-        this.DirectionButton('→', Direction.RIGHT)
       }
+      .alignItems(HorizontalAlign.Center)
+    } else {
+      Column({ space: 7 }) {
+        this.DirectionButton('↑', Direction.UP)
+        Row({ space: 7 }) {
+          this.DirectionButton('←', Direction.LEFT)
+          this.DirectionButton('↓', Direction.DOWN)
+          this.DirectionButton('→', Direction.RIGHT)
+        }
+      }
+      .alignItems(HorizontalAlign.Center)
     }
   }
 
@@ -883,6 +903,75 @@ struct Index {
       Column({ space: 14 }) {
         this.PageHeader('设置')
         this.SettingRow('控制方式', '游戏中的主要触控方式', 0)
+        Text('方向按钮')
+          .width('100%')
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.palette().text)
+        Column({ space: 14 }) {
+          Row() {
+            Column({ space: 4 }) {
+              Text('按钮大小')
+                .fontSize(16)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(this.palette().text)
+              Text('可调范围 44–80 vp')
+                .fontSize(12)
+                .fontColor(this.palette().muted)
+            }
+            .alignItems(HorizontalAlign.Start)
+            Blank()
+            Text(Math.round(this.settings.directionButtonSize).toString() + ' vp')
+              .fontSize(14)
+              .fontColor(this.palette().primary)
+          }
+          Slider({
+            value: this.settings.directionButtonSize,
+            min: 44,
+            max: 80,
+            step: 2,
+            style: SliderStyle.OutSet
+          })
+            .selectedColor(this.palette().primary)
+            .trackColor(this.palette().backgroundGlow)
+            .blockColor(this.palette().secondary)
+            .onChange((value: number) => {
+              this.settings.directionButtonSize = value;
+              this.updateSettings();
+            })
+          Row({ space: 10 }) {
+            Button('十字布局')
+              .layoutWeight(1)
+              .fontColor(this.settings.directionPadLayout === DirectionPadLayout.CROSS ?
+                this.palette().background : this.palette().text)
+              .backgroundColor(this.settings.directionPadLayout === DirectionPadLayout.CROSS ?
+                this.palette().primary : this.palette().backgroundGlow)
+              .onClick(() => {
+                this.settings.directionPadLayout = DirectionPadLayout.CROSS;
+                this.updateSettings();
+              })
+            Button('紧凑布局')
+              .layoutWeight(1)
+              .fontColor(this.settings.directionPadLayout === DirectionPadLayout.COMPACT ?
+                this.palette().background : this.palette().text)
+              .backgroundColor(this.settings.directionPadLayout === DirectionPadLayout.COMPACT ?
+                this.palette().primary : this.palette().backgroundGlow)
+              .onClick(() => {
+                this.settings.directionPadLayout = DirectionPadLayout.COMPACT;
+                this.updateSettings();
+              })
+          }
+          Text('预览')
+            .width('100%')
+            .fontSize(12)
+            .fontColor(this.palette().muted)
+          this.DirectionPad()
+        }
+        .width('100%')
+        .padding(17)
+        .backgroundColor(this.palette().panel)
+        .border({ width: 1, color: this.palette().panelBorder })
+        .borderRadius(18)
         this.SettingRow('音效', '吃到食物与结算提示', 1)
         this.SettingRow('振动反馈', '支持设备上提供轻触反馈', 2)
         Text('主题').width('100%').fontSize(15).fontWeight(FontWeight.Bold).fontColor(this.palette().text)

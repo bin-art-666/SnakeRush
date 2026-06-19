@@ -24,6 +24,11 @@ export enum ControlMode {
   BUTTON = 'button'
 }
 
+export enum DirectionPadLayout {
+  CROSS = 'cross',
+  COMPACT = 'compact'
+}
+
 export enum ThemeName {
   CLASSIC = 'classic',
   ICE = 'ice',
@@ -65,6 +70,8 @@ export class RankRecord {
 
 export class GameSettings {
   controlMode: ControlMode = ControlMode.SWIPE;
+  directionButtonSize: number = 58;
+  directionPadLayout: DirectionPadLayout = DirectionPadLayout.COMPACT;
   theme: ThemeName = ThemeName.ICE;
   soundEnabled: boolean = true;
   vibrationEnabled: boolean = true;

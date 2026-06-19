@@ -2,6 +2,7 @@ import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 import {
   ControlMode,
+  DirectionPadLayout,
   Difficulty,
   GameSettings,
   RankRecord,
@@ -10,6 +11,8 @@ import {
 
 class StoredSettings {
   controlMode: string = ControlMode.SWIPE;
+  directionButtonSize: number = 58;
+  directionPadLayout: string = DirectionPadLayout.COMPACT;
   theme: string = ThemeName.ICE;
   soundEnabled: boolean = true;
   vibrationEnabled: boolean = true;
@@ -58,6 +61,9 @@ export class StorageService {
     try {
       const value: StoredSettings = JSON.parse(text) as StoredSettings;
       result.controlMode = value.controlMode as ControlMode;
+      result.directionButtonSize = Math.max(44, Math.min(80, value.directionButtonSize ?? 58));
+      result.directionPadLayout =
+        (value.directionPadLayout ?? DirectionPadLayout.COMPACT) as DirectionPadLayout;
       result.theme = value.theme as ThemeName;
       result.soundEnabled = value.soundEnabled;
       result.vibrationEnabled = value.vibrationEnabled;
@@ -74,6 +80,8 @@ export class StorageService {
     }
     const value: StoredSettings = new StoredSettings();
     value.controlMode = settings.controlMode;
+    value.directionButtonSize = settings.directionButtonSize;
+    value.directionPadLayout = settings.directionPadLayout;
     value.theme = settings.theme;
     value.soundEnabled = settings.soundEnabled;
     value.vibrationEnabled = settings.vibrationEnabled;
