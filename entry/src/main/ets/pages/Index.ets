@@ -2,7 +2,8 @@ import { promptAction } from '@kit.ArkUI';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { KeyCode } from '@kit.InputKit';
 import { vibrator } from '@kit.SensorServiceKit';
-import { AccountProfile, AccountService, AccountStatus } from '../service/AccountService';
+// 华为账号登录功能已停用。
+// import { AccountProfile, AccountService, AccountStatus } from '../service/AccountService';
 import { GameEngine } from '../engine/GameEngine';
 import {
   ControlMode,
@@ -29,7 +30,6 @@ enum AppPage {
   RANK = 'rank',
   SETTINGS = 'settings',
   ABOUT = 'about',
-  ACCOUNT = 'account'
 }
 
 @Entry
@@ -47,7 +47,6 @@ struct Index {
   @State snapshot: GameSnapshot = new GameSnapshot();
   @State settings: GameSettings = new GameSettings();
   @State ranks: RankRecord[] = [];
-  @State account: AccountProfile = new AccountProfile();
   @State selectedDifficulty: Difficulty = Difficulty.NORMAL;
   @State windowWidth: number = 360;
   @State windowHeight: number = 780;
@@ -62,7 +61,6 @@ struct Index {
     this.settings = StorageService.getSettings();
     this.selectedDifficulty = this.settings.defaultDifficulty;
     this.ranks = StorageService.getRanks();
-    this.account = AccountService.getProfile();
     this.snapshot.bestScore = StorageService.getBestScore();
     this.splashTimerId = setTimeout(() => {
       this.replacePage(AppPage.HOME);
@@ -156,8 +154,6 @@ struct Index {
         this.RankPage()
       } else if (this.page === AppPage.SETTINGS) {
         this.SettingsPage()
-      } else if (this.page === AppPage.ACCOUNT) {
-        this.AccountPage()
       } else {
         this.AboutPage()
       }
@@ -350,25 +346,6 @@ struct Index {
     this.settings = refreshed;
   }
 
-  private async login(): Promise<void> {
-    if (this.account.status === AccountStatus.AUTHORIZING) {
-      return;
-    }
-    this.account.status = AccountStatus.AUTHORIZING;
-    const authorizing: AccountProfile = new AccountProfile();
-    authorizing.status = AccountStatus.AUTHORIZING;
-    authorizing.name = this.account.name;
-    authorizing.avatar = this.account.avatar;
-    this.account = authorizing;
-    this.account = await AccountService.signIn();
-    promptAction.showToast({ message: this.account.message });
-  }
-
-  private async logout(revoke: boolean): Promise<void> {
-    this.account = await AccountService.signOut(revoke);
-    promptAction.showToast({ message: revoke ? '已退出并取消授权' : '已退出登录' });
-  }
-
   @Builder
   private GlassButton(label: string, action: () => void, primary: boolean = false): void {
     Button(label)
@@ -419,12 +396,12 @@ struct Index {
         .backgroundColor(this.palette().primary)
         .borderRadius(30)
         .shadow({ radius: 34, color: this.palette().primary + '88' })
-      Text('SNAKE RUSH')
+      Text('蛇影冲刺')
         .fontSize(32)
         .fontWeight(FontWeight.Bold)
         .letterSpacing(3)
         .fontColor(this.palette().text)
-      Text('蛇影冲刺')
+      Text('贪吃蛇休闲游戏')
         .fontSize(18)
         .fontColor(this.palette().muted)
       LoadingProgress()
@@ -440,53 +417,20 @@ struct Index {
   }
 
   @Builder
-  private AccountChip(): void {
-    Row({ space: 9 }) {
-      if (this.account.avatar.length > 0) {
-        Image(this.account.avatar)
-          .width(34)
-          .height(34)
-          .borderRadius(17)
-          .objectFit(ImageFit.Cover)
-      } else {
-        Text(this.account.status === AccountStatus.SIGNED_IN ? '华' : '游')
-          .width(34)
-          .height(34)
-          .textAlign(TextAlign.Center)
-          .fontSize(15)
-          .fontColor(this.palette().background)
-          .backgroundColor(this.palette().primary)
-          .borderRadius(17)
-      }
-      Text(this.account.status === AccountStatus.SIGNED_IN ? this.account.name : '游客')
-        .fontSize(14)
-        .fontColor(this.palette().text)
-        .maxLines(1)
-    }
-    .padding({ left: 8, right: 14, top: 7, bottom: 7 })
-    .backgroundColor(this.palette().panel)
-    .border({ width: 1, color: this.palette().panelBorder })
-    .borderRadius(24)
-    .onClick(() => this.navigate(AppPage.ACCOUNT))
-  }
-
-  @Builder
   private HomePage(): void {
     Scroll() {
       Column({ space: 18 }) {
         Row() {
           Column() {
-            Text('SNAKE RUSH')
+            Text('蛇影冲刺')
               .fontSize(this.windowWidth > 700 ? 36 : 29)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.palette().text)
-            Text('蛇影冲刺')
+            Text('速度 · 策略 · 反应')
               .fontSize(15)
               .fontColor(this.palette().primary)
           }
           .alignItems(HorizontalAlign.Start)
-          Blank()
-          this.AccountChip()
         }
         .width('100%')
 
@@ -529,9 +473,12 @@ struct Index {
           '驾驶时不可游玩' : '开始游戏', () => this.navigate(AppPage.DIFFICULTY), true)
         this.GlassButton('排行榜', () => this.navigate(AppPage.RANK))
         this.GlassButton('设置', () => this.navigate(AppPage.SETTINGS))
-        this.GlassButton('关于 Snake Rush', () => this.navigate(AppPage.ABOUT))
+        this.GlassButton('关于蛇影冲刺', () => this.navigate(AppPage.ABOUT))
       }
       .width('100%')
+      .constraintSize({ minHeight: this.windowHeight })
+      .justifyContent(FlexAlign.Start)
+      .alignItems(HorizontalAlign.Start)
       .padding(this.windowWidth > 700 ? 48 : 22)
     }
     .width('100%')
@@ -778,8 +725,7 @@ struct Index {
   private RankPage(): void {
     Column({ space: 18 }) {
       this.PageHeader('本地排行榜')
-      Text('成绩仅保存在本机 · 当前展示身份：' +
-        (this.account.status === AccountStatus.SIGNED_IN ? this.account.name : '玩家'))
+      Text('成绩仅保存在本机 · 当前展示身份：玩家')
         .width('100%').fontSize(13).fontColor(this.palette().muted)
       if (this.ranks.length === 0) {
         Column({ space: 12 }) {
@@ -799,7 +745,7 @@ struct Index {
                   .width(36).fontSize(20).fontWeight(FontWeight.Bold)
                   .fontColor(index < 3 ? this.palette().food : this.palette().muted)
                 Column({ space: 3 }) {
-                  Text(this.account.status === AccountStatus.SIGNED_IN ? this.account.name : '玩家')
+                  Text('玩家')
                     .fontSize(16).fontWeight(FontWeight.Medium).fontColor(this.palette().text)
                   Text(difficultyLabel(record.difficulty) + ' · ' +
                     new Date(record.timestamp).toLocaleDateString())
@@ -883,11 +829,6 @@ struct Index {
             this.selectedDifficulty = this.settings.defaultDifficulty;
             this.updateSettings();
           })
-      } else {
-        Button(!AccountService.isAvailable() ? '不可用' :
-          (this.account.status === AccountStatus.SIGNED_IN ? this.account.name : '登录'))
-          .fontColor(this.palette().primary).backgroundColor(this.palette().backgroundGlow)
-          .onClick(() => this.navigate(AppPage.ACCOUNT))
       }
     }
     .width('100%')
@@ -990,7 +931,6 @@ struct Index {
             })
         }
         this.SettingRow('默认难度', '进入难度页时预先选择', 3)
-        this.SettingRow('华为账号', '可选登录，仅用于本机身份展示', 4)
       }
       .width('100%')
       .padding(this.windowWidth > 700 ? 48 : 22)
@@ -1000,75 +940,35 @@ struct Index {
   }
 
   @Builder
-  private AccountPage(): void {
-    Column({ space: 18 }) {
-      this.PageHeader('华为账号')
-      Column({ space: 14 }) {
-        if (this.account.avatar.length > 0) {
-          Image(this.account.avatar).width(84).height(84).borderRadius(42).objectFit(ImageFit.Cover)
-        } else {
-          Text(this.account.status === AccountStatus.SIGNED_IN ? '华' : '游')
-            .width(84).height(84).textAlign(TextAlign.Center).fontSize(36)
-            .fontColor(this.palette().background).backgroundColor(this.palette().primary).borderRadius(42)
-        }
-        Text(this.account.status === AccountStatus.SIGNED_IN ? this.account.name : '游客模式')
-          .fontSize(24).fontWeight(FontWeight.Bold).fontColor(this.palette().text)
-        Text(this.account.status === AccountStatus.SIGNED_IN ?
-          '账号资料仅用于本机展示，成绩不会上传。' :
-          '无需登录也可以游玩全部基础内容。')
-          .fontSize(14).fontColor(this.palette().muted).textAlign(TextAlign.Center)
-      }
-      .width('100%')
-      .padding(28)
-      .backgroundColor(this.palette().panel)
-      .border({ width: 1, color: this.palette().panelBorder })
-      .borderRadius(28)
-      if (this.account.status === AccountStatus.SIGNED_IN) {
-        this.GlassButton('退出登录', () => this.logout(false))
-        this.GlassButton('退出并取消授权', () => this.logout(true))
-      } else if (AccountService.isAvailable()) {
-        this.GlassButton(this.account.status === AccountStatus.AUTHORIZING ?
-          '正在打开华为账号…' : '使用华为账号登录', () => this.login(), true)
-        Text('将请求最小范围的 profile 权限，用于读取昵称和头像。')
-          .fontSize(12).fontColor(this.palette().muted).textAlign(TextAlign.Center)
-      } else {
-        Text('当前设备类型不提供 Account Kit 登录，游戏将保持游客模式。')
-          .fontSize(14).fontColor(this.palette().muted).textAlign(TextAlign.Center)
-      }
-      Blank()
-    }
-    .width('100%')
-    .height('100%')
-    .padding(this.windowWidth > 700 ? 48 : 22)
-  }
-
-  @Builder
   private AboutPage(): void {
     Scroll() {
       Column({ space: 18 }) {
         this.PageHeader('关于')
-        Text('Snake Rush')
+        Text('蛇影冲刺')
           .fontSize(34).fontWeight(FontWeight.Bold).fontColor(this.palette().primary)
-        Text('蛇影冲刺 · 1.0.0')
+        Text('1.0.0')
           .fontSize(15).fontColor(this.palette().muted)
         Column({ space: 12 }) {
           Text('经典玩法，现代光影')
             .fontSize(20).fontWeight(FontWeight.Bold).fontColor(this.palette().text)
-          Text('Snake Rush 使用 ArkTS 与 ArkUI 构建，在经典贪吃蛇规则上加入液态玻璃界面、渐进速度、主题和本地排行榜。')
+          Text('蛇影冲刺使用 ArkTS 与 ArkUI 构建，在经典贪吃蛇规则上加入渐进速度、主题和本地排行榜。')
             .fontSize(14).lineHeight(24).fontColor(this.palette().muted)
         }
         .width('100%').padding(22).alignItems(HorizontalAlign.Start)
         .backgroundColor(this.palette().panel).borderRadius(22)
-        Text('隐私说明')
-          .width('100%').fontSize(19).fontWeight(FontWeight.Bold).fontColor(this.palette().text)
-        Text('华为账号登录完全可选。应用仅在获得授权后读取昵称与头像用于本机身份展示，不保存访问令牌、授权码，不上传游戏成绩或设置。退出登录后会清除本地账号展示缓存。')
-          .width('100%').fontSize(14).lineHeight(24).fontColor(this.palette().muted)
-        Text('设备说明')
-          .width('100%').fontSize(19).fontWeight(FontWeight.Bold).fontColor(this.palette().text)
-        Text('手机、平板、2in1 与电视支持完整游戏；手表使用紧凑布局；车机端出于驾驶安全仅开放资料、设置和排行榜。')
-          .width('100%').fontSize(14).lineHeight(24).fontColor(this.palette().muted)
+        // Text('隐私说明')
+        //   .width('100%').fontSize(19).fontWeight(FontWeight.Bold).fontColor(this.palette().text)
+        // Text('排行榜、设置和最高分仅保存在本机，不会上传游戏成绩或设置。')
+        //   .width('100%').fontSize(14).lineHeight(24).fontColor(this.palette().muted)
+        // Text('设备说明')
+        //   .width('100%').fontSize(19).fontWeight(FontWeight.Bold).fontColor(this.palette().text)
+        // Text('手机、平板、2in1 与电视支持完整游戏；手表使用紧凑布局；车机端出于驾驶安全仅开放资料、设置和排行榜。')
+        //   .width('100%').fontSize(14).lineHeight(24).fontColor(this.palette().muted)
       }
       .width('100%')
+      .constraintSize({ minHeight: this.windowHeight })
+      .justifyContent(FlexAlign.Start)
+      .alignItems(HorizontalAlign.Start)
       .padding(this.windowWidth > 700 ? 48 : 22)
     }
     .width('100%')

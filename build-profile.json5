@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "E:/huawei_key/snakerush.p12",
+          "storePassword": "00000016E801D40A9B058FC50074F864B006F26D6C127BC8717528B66138FAB2B7DDCB5EB958",
+          "keyAlias": "snakerush-release",
+          "keyPassword": "0000001682A6656076FF0473AA76969F399DD55C0A3229CBA63668EC371F73BFE9DB8C3B6D83",
+          "signAlg": "SHA256withECDSA",
+          "profile": "E:/huawei_key/one/snakerushRelease.p7b",
+          "certpath": "E:/huawei_key/one/snakerush.cer"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

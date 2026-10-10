@@ -2,7 +2,8 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { StorageService } from '../service/StorageService';
-import { AccountService } from '../service/AccountService';
+// 华为账号登录功能已停用。
+// import { AccountService } from '../service/AccountService';
 
 const DOMAIN = 0x0000;
 
@@ -26,7 +27,7 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
     await StorageService.init(this.context);
-    AccountService.init(this.context);
+    // AccountService.init(this.context);
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));

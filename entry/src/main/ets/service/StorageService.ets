@@ -31,8 +31,6 @@ export class StorageService {
   private static readonly BEST_SCORE: string = 'best_score';
   private static readonly SETTINGS: string = 'settings';
   private static readonly RANKS: string = 'ranks';
-  private static readonly ACCOUNT_NAME: string = 'account_name';
-  private static readonly ACCOUNT_AVATAR: string = 'account_avatar';
 
   static async init(context: common.Context): Promise<void> {
     if (StorageService.store === null) {
@@ -126,28 +124,4 @@ export class StorageService {
     await StorageService.store.flush();
   }
 
-  static getCachedAccount(): string[] {
-    return [
-      String(StorageService.store?.getSync(StorageService.ACCOUNT_NAME, '') ?? ''),
-      String(StorageService.store?.getSync(StorageService.ACCOUNT_AVATAR, '') ?? '')
-    ];
-  }
-
-  static async saveCachedAccount(name: string, avatar: string): Promise<void> {
-    if (StorageService.store === null) {
-      return;
-    }
-    StorageService.store.putSync(StorageService.ACCOUNT_NAME, name);
-    StorageService.store.putSync(StorageService.ACCOUNT_AVATAR, avatar);
-    await StorageService.store.flush();
-  }
-
-  static async clearCachedAccount(): Promise<void> {
-    if (StorageService.store === null) {
-      return;
-    }
-    StorageService.store.deleteSync(StorageService.ACCOUNT_NAME);
-    StorageService.store.deleteSync(StorageService.ACCOUNT_AVATAR);
-    await StorageService.store.flush();
-  }
 }

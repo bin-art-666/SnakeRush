@@ -1,3 +1,4 @@
+/* 华为账号登录功能已停用，保留原实现以便后续按需恢复。
 import { authentication } from '@kit.AccountKit';
 import { common } from '@kit.AbilityKit';
 import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
@@ -157,3 +158,4 @@ export class AccountService {
     }
   }
 }
+*/
